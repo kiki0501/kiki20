@@ -1,0 +1,95 @@
+name: Enable GitHub Sync Feature
+
+on:
+  workflow_dispatch:
+    inputs:
+      confirm:
+        description: '确认启用 GitHub 同步功能 (yes/no)'
+        required: true
+        default: 'no'
+
+jobs:
+  enable-github-sync:
+    runs-on: ubuntu-latest
+    if: github.event.inputs.confirm == 'yes'
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+      
+      - name: Setup Go
+        uses: actions/setup-go@v4
+        with:
+          go-version: '1.21'
+      
+      - name: Restore github_sync.go
+        run: |
+          echo "恢复 GitHub 同步服务文件..."
+          if [ -f service/github_sync.go.bak ]; then
+            mv service/github_sync.go.bak service/github_sync.go
+            echo "✅ 已恢复 service/github_sync.go"
+          else
+            echo "⚠️ 备份文件不存在，跳过"
+          fi
+      
+      - name: Add dependencies to go.mod
+        run: |
+          echo "添加依赖到 go.mod..."
+          go get github.com/google/go-github/v50@v50.2.0
+          go get golang.org/x/oauth2@v0.0.0-20220223155221-ee480838109b
+      
+      - name: Run go mod tidy
+        run: |
+          echo "运行 go mod tidy 补全所有依赖..."
+          go mod tidy
+          echo "✅ 依赖已更新"
+      
+      - name: Verify changes
+        run: |
+          echo "验证文件变更..."
+          git status
+          echo ""
+          echo "go.mod 变更:"
+          git diff go.mod || echo "无变更"
+          echo ""
+          echo "go.sum 变更:"
+          git diff go.sum | head -20 || echo "无变更"
+      
+      - name: Commit and push changes
+        run: |
+          git config --local user.name "github-actions[bot]"
+          git config --local user.email "github-actions[bot]@users.noreply.github.com"
+          
+          git add service/github_sync.go go.mod go.sum
+          
+          if git diff --staged --quiet; then
+            echo "⚠️ 没有需要提交的变更"
+          else
+            git commit -m "feat: enable GitHub sync feature
+
+- Restore service/github_sync.go from backup
+- Add required dependencies to go.mod
+- Update go.sum with all transitive dependencies
+- Feature enabled via GitHub Actions automation"
+            
+            git push
+            echo "✅ 变更已提交并推送"
+          fi
+      
+      - name: Summary
+        run: |
+          echo "=========================================="
+          echo "GitHub 同步功能已成功启用！"
+          echo "=========================================="
+          echo ""
+          echo "📝 需要配置以下环境变量："
+          echo "  - GITHUB_SYNC_TOKEN=your_github_token"
+          echo "  - GITHUB_SYNC_REPO=https://github.com/owner/repo"
+          echo "  - GITHUB_SYNC_INTERVAL=300 (可选)"
+          echo ""
+          echo "📖 详细文档："
+          echo "  - docs/GITHUB_SYNC.md"
+          echo "  - docs/ENABLE_GITHUB_SYNC.md"
+          echo "=========================================="
