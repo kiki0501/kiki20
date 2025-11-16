@@ -197,7 +197,8 @@ func OaiStreamHandler(c *gin.Context, info *relaycommon.RelayInfo, resp *http.Re
 			if err := json.Unmarshal([]byte(item), &streamResp); err == nil {
 				for _, choice := range streamResp.Choices {
 					if choice.Delta.Content != nil {
-						if contentStr, ok := choice.Delta.Content.(string); ok {
+						contentStr := choice.Delta.GetContentString()
+						if contentStr != "" {
 							fullResponseContent.WriteString(contentStr)
 						}
 					}
@@ -280,9 +281,7 @@ func OpenaiHandler(c *gin.Context, info *relaycommon.RelayInfo, resp *http.Respo
 	if common.ContentLoggingEnabled {
 		var fullResponseContent strings.Builder
 		for _, choice := range simpleResponse.Choices {
-			if choice.Message != nil {
-				fullResponseContent.WriteString(choice.Message.StringContent())
-			}
+			fullResponseContent.WriteString(choice.Message.StringContent())
 		}
 		responseContent := fullResponseContent.String()
 		if common.MaxContentLength > 0 && len(responseContent) > common.MaxContentLength {
