@@ -63,6 +63,7 @@ export const useSidebar = () => {
       models: true,
       redemption: true,
       user: true,
+      'github-sync': true,
       setting: true,
     },
   };
