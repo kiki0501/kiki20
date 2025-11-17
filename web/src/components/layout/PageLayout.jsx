@@ -70,6 +70,8 @@ const PageLayout = () => {
   const isConsoleRoute = location.pathname.startsWith('/console');
   const showSider = isConsoleRoute && (!isMobile || drawerOpen);
 
+  const hideHeader = location.pathname === '/query';
+
   useEffect(() => {
     if (isMobile && drawerOpen && collapsed) {
       setCollapsed(false);
@@ -128,22 +130,24 @@ const PageLayout = () => {
         overflow: isMobile ? 'visible' : 'hidden',
       }}
     >
-      <Header
-        style={{
-          padding: 0,
-          height: 'auto',
-          lineHeight: 'normal',
-          position: 'fixed',
-          width: '100%',
-          top: 0,
-          zIndex: 100,
-        }}
-      >
-        <HeaderBar
-          onMobileMenuToggle={() => setDrawerOpen((prev) => !prev)}
-          drawerOpen={drawerOpen}
-        />
-      </Header>
+      {!hideHeader && (
+        <Header
+          style={{
+            padding: 0,
+            height: 'auto',
+            lineHeight: 'normal',
+            position: 'fixed',
+            width: '100%',
+            top: 0,
+            zIndex: 100,
+          }}
+        >
+          <HeaderBar
+            onMobileMenuToggle={() => setDrawerOpen((prev) => !prev)}
+            drawerOpen={drawerOpen}
+          />
+        </Header>
+      )}
       <Layout
         style={{
           overflow: isMobile ? 'visible' : 'auto',
@@ -156,11 +160,11 @@ const PageLayout = () => {
             style={{
               position: 'fixed',
               left: 0,
-              top: '64px',
+              top: hideHeader ? '0' : '64px',
               zIndex: 99,
               border: 'none',
               paddingRight: '0',
-              height: 'calc(100vh - 64px)',
+              height: hideHeader ? '100vh' : 'calc(100vh - 64px)',
               width: 'var(--sidebar-current-width)',
             }}
           >
