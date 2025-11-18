@@ -152,6 +152,7 @@ func InitOptionMap() {
 	common.OptionMap["GitHubSyncToken"] = ""
 	common.OptionMap["GitHubSyncRepo"] = ""
 	common.OptionMap["GitHubSyncInterval"] = "300"
+	common.OptionMap["GitHubSyncLastTime"] = ""
 
 	// 自动添加所有注册的模型配置
 	modelConfigs := config.GlobalConfig.ExportAllConfigs()
@@ -470,6 +471,9 @@ func updateOptionMap(key string, value string) (err error) {
 		// 不需要额外处理，已经在 OptionMap 中更新
 	case "GitHubSyncInterval":
 		// GitHub 同步间隔（秒）
+		// 不需要额外处理，已经在 OptionMap 中更新
+	case "GitHubSyncLastTime":
+		// GitHub 最后同步时间
 		// 不需要额外处理，已经在 OptionMap 中更新
 	}
 	return err
