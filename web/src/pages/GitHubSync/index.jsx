@@ -29,6 +29,7 @@ const GitHubSync = () => {
   const { t } = useTranslation();
   const [loading, setLoading] = useState(false);
   const [syncing, setSyncing] = useState(false);
+  const [pulling, setPulling] = useState(false);
   const [config, setConfig] = useState({
     github_sync_token: '',
     github_sync_repo: '',
@@ -133,6 +134,23 @@ const GitHubSync = () => {
     }
   };
 
+  const handlePull = async () => {
+    setPulling(true);
+    try {
+      const res = await API.post('/api/github/sync/pull');
+      if (res.data.success) {
+        showSuccess(t('拉取成功，数据已恢复'));
+        loadSyncStatus();
+      } else {
+        showError(t('拉取失败: ') + (res.data.message || ''));
+      }
+    } catch (error) {
+      showError(t('拉取失败: ') + (error.message || ''));
+    } finally {
+      setPulling(false);
+    }
+  };
+
   const formatTime = (date) => {
     if (!date) return t('从未同步');
     return date.toLocaleString('zh-CN', {
@@ -215,16 +233,28 @@ const GitHubSync = () => {
                 <Text type='tertiary'>{config.github_sync_interval} {t('秒')}</Text>
               </div>
             )}
-            <Button
-              icon={<IconSync />}
-              type='primary'
-              onClick={handleSync}
-              loading={syncing}
-              disabled={!config.github_sync_token || !config.github_sync_repo}
-              block
-            >
-              {syncing ? t('同步中...') : t('立即同步')}
-            </Button>
+            <Space vertical spacing='medium' style={{ width: '100%' }}>
+              <Button
+                icon={<IconSync />}
+                type='primary'
+                onClick={handleSync}
+                loading={syncing}
+                disabled={!config.github_sync_token || !config.github_sync_repo || pulling}
+                block
+              >
+                {syncing ? t('同步中...') : t('推送到 GitHub')}
+              </Button>
+              <Button
+                icon={<IconRefresh />}
+                type='secondary'
+                onClick={handlePull}
+                loading={pulling}
+                disabled={!config.github_sync_token || !config.github_sync_repo || syncing}
+                block
+              >
+                {pulling ? t('拉取中...') : t('从 GitHub 拉取')}
+              </Button>
+            </Space>
           </Space>
         </Card>
 

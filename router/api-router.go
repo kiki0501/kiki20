@@ -267,6 +267,7 @@ func SetApiRouter(router *gin.Engine) {
 		{
 			githubSyncRoute.GET("/status", controller.GetGitHubSyncStatus)
 			githubSyncRoute.POST("", controller.TriggerGitHubSync)
+			githubSyncRoute.POST("/pull", controller.PullGitHubBackup)
 		}
 	}
 }
