@@ -415,8 +415,7 @@ func downloadFromGitHub(token, owner, repo, path string) ([]byte, error) {
 	}
 	
 	// 移除换行符
-	contentStr = strings.ReplaceAll(contentStr, "
-", "")
+	contentStr = strings.ReplaceAll(contentStr, "\n", "")
 	
 	// Base64 解码
 	data, err := base64.StdEncoding.DecodeString(contentStr)
