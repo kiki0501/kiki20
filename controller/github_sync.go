@@ -146,12 +146,7 @@ func syncTokens(token, owner, repo string) error {
 		return err
 	}
 	
-	// 清除敏感字段
-	for i := range tokens {
-		tokens[i].Key = "" // 清空 key 字段
-	}
-	
-	// 序列化为 JSON
+	// 序列化为 JSON（包含 Key 字段）
 	data, err := json.MarshalIndent(tokens, "", "  ")
 	if err != nil {
 		return err
@@ -169,12 +164,7 @@ func syncChannels(token, owner, repo string) error {
 		return err
 	}
 	
-	// 清除敏感字段
-	for i := range channels {
-		channels[i].Key = "" // 清空 key 字段
-	}
-	
-	// 序列化为 JSON
+	// 序列化为 JSON（包含 Key 字段）
 	data, err := json.MarshalIndent(channels, "", "  ")
 	if err != nil {
 		return err
@@ -306,16 +296,15 @@ func pullTokens(token, owner, repo string) error {
 		return fmt.Errorf("解析 tokens.json 失败: %v", err)
 	}
 	
-	// 批量更新或插入（注意：这里不会恢复 key 字段，因为备份时已排除）
+	// 批量更新或插入（包含 Key 字段的完整恢复）
 	for _, t := range tokens {
 		var existing model.Token
 		err := model.DB.Where("id = ?", t.Id).First(&existing).Error
 		if err == nil {
-			// 更新现有记录（保留原有的 key）
-			t.Key = existing.Key
+			// 更新现有记录（包括 Key 字段）
 			model.DB.Model(&existing).Updates(t)
 		} else {
-			// 插入新记录（需要用户手动设置 key）
+			// 插入新记录（包括 Key 字段）
 			model.DB.Create(&t)
 		}
 	}
@@ -335,16 +324,15 @@ func pullChannels(token, owner, repo string) error {
 		return fmt.Errorf("解析 channels.json 失败: %v", err)
 	}
 	
-	// 批量更新或插入
+	// 批量更新或插入（包含 Key 字段的完整恢复）
 	for _, ch := range channels {
 		var existing model.Channel
 		err := model.DB.Where("id = ?", ch.Id).First(&existing).Error
 		if err == nil {
-			// 更新现有记录（保留原有的 key）
-			ch.Key = existing.Key
+			// 更新现有记录（包括 Key 字段）
 			model.DB.Model(&existing).Updates(ch)
 		} else {
-			// 插入新记录
+			// 插入新记录（包括 Key 字段）
 			model.DB.Create(&ch)
 		}
 	}
