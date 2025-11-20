@@ -413,3 +413,61 @@ func downloadFromGitHub(token, owner, repo, path string) ([]byte, error) {
 	
 	return data, nil
 }
+
+// StartGitHubAutoSync 启动 GitHub 自动同步任务
+func StartGitHubAutoSync() {
+	// 检查是否启用了自动同步
+	if !common.GitHubSyncEnabled {
+		common.SysLog("GitHub 自动同步未启用")
+		return
+	}
+	
+	// 从数据库读取配置
+	common.OptionMapRWMutex.RLock()
+	token := common.OptionMap["GitHubSyncToken"]
+	repo := common.OptionMap["GitHubSyncRepo"]
+	common.OptionMapRWMutex.RUnlock()
+	
+	if token == "" || repo == "" {
+		common.SysLog("GitHub 同步配置不完整，自动同步未启动")
+		return
+	}
+	
+	interval := time.Duration(common.GitHubSyncInterval) * time.Second
+	common.SysLog(fmt.Sprintf("GitHub 自动同步已启动，同步间隔: %v", interval))
+	
+	// 创建定时器
+	ticker := time.NewTicker(interval)
+	
+	// 启动后台协程执行定时同步
+	go func() {
+		defer ticker.Stop()
+		
+		for range ticker.C {
+			// 重新读取配置（可能在运行时被更新）
+			common.OptionMapRWMutex.RLock()
+			token := common.OptionMap["GitHubSyncToken"]
+			repo := common.OptionMap["GitHubSyncRepo"]
+			common.OptionMapRWMutex.RUnlock()
+			
+			if token == "" || repo == "" {
+				common.SysLog("GitHub 同步配置不完整，跳过本次同步")
+				continue
+			}
+			
+			// 执行同步
+			common.SysLog("开始执行 GitHub 自动同步...")
+			err := syncDataToGitHub(token, repo)
+			if err != nil {
+				common.SysLog(fmt.Sprintf("GitHub 自动同步失败: %v", err))
+				continue
+			}
+			
+			// 更新最后同步时间
+			now := time.Now().Format("2006-01-02 15:04:05")
+			_ = model.UpdateOption("GitHubSyncLastTime", now)
+			
+			common.SysLog("GitHub 自动同步完成")
+		}
+	}()
+}

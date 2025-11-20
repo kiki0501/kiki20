@@ -118,12 +118,7 @@ func main() {
 	}
 
 	// Start GitHub sync service
-	// 注意: GitHub 同步服务已被暂时禁用以解决 Docker 构建问题
-	// 要启用此功能，请使用 GitHub Actions workflow: .github/workflows/enable-github-sync.yml
-	// 或参考文档: docs/ENABLE_GITHUB_SYNC.md
-	// if ghService := service.GetGitHubSyncService(); ghService != nil {
-	// 	ghService.StartAutoSync()
-	// }
+	go controller.StartGitHubAutoSync()
 
 	// Start log content cleanup task
 	go startLogContentCleanupTask()

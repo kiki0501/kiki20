@@ -124,6 +124,9 @@ var BatchUpdateInterval int
 
 var RelayTimeout int // unit is second
 
+var GitHubSyncEnabled = false
+var GitHubSyncInterval = 300 // unit is second, default 5 minutes
+
 var GeminiSafetySetting string
 
 // https://docs.cohere.com/docs/safety-modes Type; NONE/CONTEXTUAL/STRICT

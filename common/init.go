@@ -89,6 +89,10 @@ func InitEnv() {
 	// Initialize string variables with GetEnvOrDefaultString
 	GeminiSafetySetting = GetEnvOrDefaultString("GEMINI_SAFETY_SETTING", "BLOCK_NONE")
 	CohereSafetySetting = GetEnvOrDefaultString("COHERE_SAFETY_SETTING", "NONE")
+	
+	// Initialize GitHub sync variables
+	GitHubSyncEnabled = GetEnvOrDefaultBool("GITHUB_SYNC_ENABLED", false)
+	GitHubSyncInterval = GetEnvOrDefault("GITHUB_SYNC_INTERVAL", 300)
 
 	// Initialize rate limit variables
 	GlobalApiRateLimitEnable = GetEnvOrDefaultBool("GLOBAL_API_RATE_LIMIT_ENABLE", true)
