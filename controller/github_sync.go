@@ -141,9 +141,9 @@ func syncDataToGitHub(token, repoURL string) error {
 
 // syncTokens 同步令牌数据到 GitHub
 func syncTokens(token, owner, repo string) error {
-	// 获取所有令牌
+	// 获取所有令牌（明确不排除任何字段，确保包含 Key）
 	var tokens []model.Token
-	if err := model.DB.Find(&tokens).Error; err != nil {
+	if err := model.DB.Select("*").Find(&tokens).Error; err != nil {
 		return err
 	}
 	
@@ -159,9 +159,9 @@ func syncTokens(token, owner, repo string) error {
 
 // syncChannels 同步渠道数据到 GitHub
 func syncChannels(token, owner, repo string) error {
-	// 获取所有渠道
+	// 获取所有渠道（明确不排除任何字段，确保包含 Key）
 	var channels []model.Channel
-	if err := model.DB.Find(&channels).Error; err != nil {
+	if err := model.DB.Select("*").Find(&channels).Error; err != nil {
 		return err
 	}
 	
@@ -300,10 +300,11 @@ func pullTokens(token, owner, repo string) error {
 	// 批量更新或插入（包含 Key 字段的完整恢复）
 	for _, t := range tokens {
 		var existing model.Token
-		err := model.DB.Where("id = ?", t.Id).First(&existing).Error
+		// 使用 Select("*") 确保查询包含所有字段
+		err := model.DB.Select("*").Where("id = ?", t.Id).First(&existing).Error
 		if err == nil {
-			// 更新现有记录（包括 Key 字段）
-			model.DB.Model(&existing).Updates(t)
+			// 更新现有记录（使用 Select 明确更新所有字段，包括 Key）
+			model.DB.Model(&existing).Select("*").Updates(t)
 		} else {
 			// 插入新记录（包括 Key 字段）
 			model.DB.Create(&t)
@@ -328,10 +329,11 @@ func pullChannels(token, owner, repo string) error {
 	// 批量更新或插入（包含 Key 字段的完整恢复）
 	for _, ch := range channels {
 		var existing model.Channel
-		err := model.DB.Where("id = ?", ch.Id).First(&existing).Error
+		// 使用 Select("*") 确保查询包含所有字段
+		err := model.DB.Select("*").Where("id = ?", ch.Id).First(&existing).Error
 		if err == nil {
-			// 更新现有记录（包括 Key 字段）
-			model.DB.Model(&existing).Updates(ch)
+			// 更新现有记录（使用 Select 明确更新所有字段，包括 Key）
+			model.DB.Model(&existing).Select("*").Updates(ch)
 		} else {
 			// 插入新记录（包括 Key 字段）
 			model.DB.Create(&ch)
