@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"os"
 	"strings"
 	"time"
 
@@ -416,20 +417,33 @@ func downloadFromGitHub(token, owner, repo, path string) ([]byte, error) {
 
 // StartGitHubAutoSync 启动 GitHub 自动同步任务
 func StartGitHubAutoSync() {
-	// 检查是否启用了自动同步
-	if !common.GitHubSyncEnabled {
-		common.SysLog("GitHub 自动同步未启用")
-		return
+	// 优先从环境变量读取配置
+	envToken := os.Getenv("GITHUB_SYNC_TOKEN")
+	envRepo := os.Getenv("GITHUB_SYNC_REPO")
+	
+	// 如果环境变量中有配置，使用环境变量
+	var token, repo string
+	if envToken != "" && envRepo != "" {
+		token = envToken
+		repo = envRepo
+		common.SysLog("使用环境变量中的 GitHub 同步配置")
+	} else {
+		// 否则从数据库读取配置
+		common.OptionMapRWMutex.RLock()
+		token = common.OptionMap["GitHubSyncToken"]
+		repo = common.OptionMap["GitHubSyncRepo"]
+		common.OptionMapRWMutex.RUnlock()
+		
+		if token != "" && repo != "" {
+			common.SysLog("使用数据库中的 GitHub 同步配置")
+		}
 	}
 	
-	// 从数据库读取配置
-	common.OptionMapRWMutex.RLock()
-	token := common.OptionMap["GitHubSyncToken"]
-	repo := common.OptionMap["GitHubSyncRepo"]
-	common.OptionMapRWMutex.RUnlock()
-	
+	// 检查配置是否完整
 	if token == "" || repo == "" {
 		common.SysLog("GitHub 同步配置不完整，自动同步未启动")
+		common.SysLog("请在 .env 文件中配置 GITHUB_SYNC_TOKEN 和 GITHUB_SYNC_REPO")
+		common.SysLog("或在管理后台的系统设置中配置 GitHub 同步")
 		return
 	}
 	
