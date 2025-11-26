@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"strings"
+	"time"
 
 	"github.com/QuantumNous/new-api/common"
 
@@ -28,6 +29,12 @@ type Token struct {
 	UsedQuota          int            `json:"used_quota" gorm:"default:0"` // used quota
 	Group              string         `json:"group" gorm:"default:''"`
 	DeletedAt          gorm.DeletedAt `gorm:"index"`
+	// 周期性额度重置配置
+	QuotaResetEnabled   bool  `json:"quota_reset_enabled" gorm:"default:false"`      // 是否启用周期重置
+	QuotaResetAmount    int   `json:"quota_reset_amount" gorm:"default:0"`           // 每次重置的额度值
+	QuotaResetStartTime int64 `json:"quota_reset_start_time" gorm:"bigint;default:0"` // 重置周期开始时间
+	QuotaResetEndTime   int64 `json:"quota_reset_end_time" gorm:"bigint;default:0"`   // 重置周期结束时间
+	LastQuotaResetTime  int64 `json:"last_quota_reset_time" gorm:"bigint;default:0"`  // 上次重置时间
 }
 
 func (token *Token) Clean() {
@@ -185,7 +192,8 @@ func (token *Token) Update() (err error) {
 		}
 	}()
 	err = DB.Model(token).Select("name", "status", "expired_time", "remain_quota", "unlimited_quota",
-		"model_limits_enabled", "model_limits", "allow_ips", "group").Updates(token).Error
+		"model_limits_enabled", "model_limits", "allow_ips", "group",
+		"quota_reset_enabled", "quota_reset_amount", "quota_reset_start_time", "quota_reset_end_time").Updates(token).Error
 	return err
 }
 
@@ -361,4 +369,65 @@ func BatchDeleteTokens(ids []int, userId int) (int, error) {
 	}
 
 	return len(tokens), nil
+}
+
+// ResetTokenQuotas 重置所有符合条件的令牌额度（每日定时任务调用）
+func ResetTokenQuotas() (int64, error) {
+	now := common.GetTimestamp()
+	// 获取今天0点的时间戳
+	todayStart := getTodayStartTimestamp()
+
+	// 查找需要重置的令牌
+	var tokens []Token
+	err := DB.Where("quota_reset_enabled = ?", true).
+		Where("quota_reset_start_time <= ?", now).
+		Where("quota_reset_end_time >= ?", now).
+		Where("last_quota_reset_time < ?", todayStart).
+		Find(&tokens).Error
+	if err != nil {
+		return 0, err
+	}
+
+	if len(tokens) == 0 {
+		return 0, nil
+	}
+
+	// 逐个更新令牌
+	var count int64
+	for _, token := range tokens {
+		result := DB.Model(&Token{}).Where("id = ?", token.Id).Updates(map[string]interface{}{
+			"remain_quota":           token.QuotaResetAmount,
+			"used_quota":             0,
+			"last_quota_reset_time":  now,
+			"status":                 common.TokenStatusEnabled,
+		})
+		if result.Error != nil {
+			common.SysLog("failed to reset token quota for token " + token.Name + ": " + result.Error.Error())
+			continue
+		}
+		count += result.RowsAffected
+
+		// 更新 Redis 缓存
+		if common.RedisEnabled {
+			token.RemainQuota = token.QuotaResetAmount
+			token.UsedQuota = 0
+			token.LastQuotaResetTime = now
+			token.Status = common.TokenStatusEnabled
+			gopool.Go(func() {
+				if err := cacheSetToken(token); err != nil {
+					common.SysLog("failed to update token cache after quota reset: " + err.Error())
+				}
+			})
+		}
+	}
+
+	return count, nil
+}
+
+// getTodayStartTimestamp 获取今天0点的时间戳
+func getTodayStartTimestamp() int64 {
+	now := time.Now()
+	// 获取今天0点
+	todayStart := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, now.Location())
+	return todayStart.Unix()
 }

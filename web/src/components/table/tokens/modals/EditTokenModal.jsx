@@ -74,6 +74,9 @@ const EditTokenModal = (props) => {
     allow_ips: '',
     group: '',
     tokenCount: 1,
+    quota_reset_enabled: false,
+    quota_reset_amount: 0,
+    quota_reset_time_range: null,
   });
 
   const handleCancel = () => {
@@ -161,6 +164,15 @@ const EditTokenModal = (props) => {
       } else {
         data.model_limits = [];
       }
+      // 处理周期性额度重置的时间范围
+      if (data.quota_reset_start_time && data.quota_reset_end_time) {
+        data.quota_reset_time_range = [
+          new Date(data.quota_reset_start_time * 1000),
+          new Date(data.quota_reset_end_time * 1000),
+        ];
+      } else {
+        data.quota_reset_time_range = null;
+      }
       if (formApiRef.current) {
         formApiRef.current.setValues({ ...getInitValues(), ...data });
       }
@@ -204,6 +216,21 @@ const EditTokenModal = (props) => {
     return result;
   };
 
+  // 处理周期性额度重置字段
+  const processQuotaResetFields = (inputs) => {
+    if (inputs.quota_reset_enabled && inputs.quota_reset_time_range) {
+      const [start, end] = inputs.quota_reset_time_range;
+      inputs.quota_reset_start_time = Math.ceil(new Date(start).getTime() / 1000);
+      inputs.quota_reset_end_time = Math.ceil(new Date(end).getTime() / 1000);
+    } else {
+      inputs.quota_reset_start_time = 0;
+      inputs.quota_reset_end_time = 0;
+    }
+    inputs.quota_reset_amount = parseInt(inputs.quota_reset_amount) || 0;
+    delete inputs.quota_reset_time_range;
+    return inputs;
+  };
+
   const submit = async (values) => {
     setLoading(true);
     if (isEdit) {
@@ -220,6 +247,7 @@ const EditTokenModal = (props) => {
       }
       localInputs.model_limits = localInputs.model_limits.join(',');
       localInputs.model_limits_enabled = localInputs.model_limits.length > 0;
+      localInputs = processQuotaResetFields(localInputs);
       let res = await API.put(`/api/token/`, {
         ...localInputs,
         id: parseInt(props.editingToken.id),
@@ -257,6 +285,7 @@ const EditTokenModal = (props) => {
         }
         localInputs.model_limits = localInputs.model_limits.join(',');
         localInputs.model_limits_enabled = localInputs.model_limits.length > 0;
+        localInputs = processQuotaResetFields(localInputs);
         let res = await API.post(`/api/token/`, localInputs);
         const { success, message } = res.data;
         if (success) {
@@ -505,6 +534,54 @@ const EditTokenModal = (props) => {
                       )}
                     />
                   </Col>
+                  <Col span={24}>
+                    <Form.Switch
+                      field='quota_reset_enabled'
+                      label={t('周期性额度重置')}
+                      size='large'
+                      extraText={t(
+                        '启用后，在指定时间范围内每天0点自动将额度重置为设定值',
+                      )}
+                    />
+                  </Col>
+                  {values.quota_reset_enabled && (
+                    <>
+                      <Col span={24}>
+                        <Form.DatePicker
+                          field='quota_reset_time_range'
+                          label={t('重置时间范围')}
+                          type='dateRange'
+                          placeholder={t('请选择重置时间范围')}
+                          rules={
+                            values.quota_reset_enabled
+                              ? [{ required: true, message: t('请选择重置时间范围') }]
+                              : []
+                          }
+                          style={{ width: '100%' }}
+                        />
+                      </Col>
+                      <Col span={24}>
+                        <Form.AutoComplete
+                          field='quota_reset_amount'
+                          label={t('每日重置额度')}
+                          placeholder={t('请输入每日重置的额度值')}
+                          type='number'
+                          extraText={renderQuotaWithPrompt(values.quota_reset_amount)}
+                          rules={
+                            values.quota_reset_enabled
+                              ? [{ required: true, message: t('请输入每日重置额度') }]
+                              : []
+                          }
+                          data={[
+                            { value: 500000, label: '1$' },
+                            { value: 5000000, label: '10$' },
+                            { value: 25000000, label: '50$' },
+                            { value: 50000000, label: '100$' },
+                          ]}
+                        />
+                      </Col>
+                    </>
+                  )}
                 </Row>
               </Card>
 

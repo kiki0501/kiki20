@@ -159,18 +159,22 @@ func AddToken(c *gin.Context) {
 		return
 	}
 	cleanToken := model.Token{
-		UserId:             c.GetInt("id"),
-		Name:               token.Name,
-		Key:                key,
-		CreatedTime:        common.GetTimestamp(),
-		AccessedTime:       common.GetTimestamp(),
-		ExpiredTime:        token.ExpiredTime,
-		RemainQuota:        token.RemainQuota,
-		UnlimitedQuota:     token.UnlimitedQuota,
-		ModelLimitsEnabled: token.ModelLimitsEnabled,
-		ModelLimits:        token.ModelLimits,
-		AllowIps:           token.AllowIps,
-		Group:              token.Group,
+		UserId:              c.GetInt("id"),
+		Name:                token.Name,
+		Key:                 key,
+		CreatedTime:         common.GetTimestamp(),
+		AccessedTime:        common.GetTimestamp(),
+		ExpiredTime:         token.ExpiredTime,
+		RemainQuota:         token.RemainQuota,
+		UnlimitedQuota:      token.UnlimitedQuota,
+		ModelLimitsEnabled:  token.ModelLimitsEnabled,
+		ModelLimits:         token.ModelLimits,
+		AllowIps:            token.AllowIps,
+		Group:               token.Group,
+		QuotaResetEnabled:   token.QuotaResetEnabled,
+		QuotaResetAmount:    token.QuotaResetAmount,
+		QuotaResetStartTime: token.QuotaResetStartTime,
+		QuotaResetEndTime:   token.QuotaResetEndTime,
 	}
 	err = cleanToken.Insert()
 	if err != nil {
@@ -248,6 +252,10 @@ func UpdateToken(c *gin.Context) {
 		cleanToken.ModelLimits = token.ModelLimits
 		cleanToken.AllowIps = token.AllowIps
 		cleanToken.Group = token.Group
+		cleanToken.QuotaResetEnabled = token.QuotaResetEnabled
+		cleanToken.QuotaResetAmount = token.QuotaResetAmount
+		cleanToken.QuotaResetStartTime = token.QuotaResetStartTime
+		cleanToken.QuotaResetEndTime = token.QuotaResetEndTime
 	}
 	err = cleanToken.Update()
 	if err != nil {

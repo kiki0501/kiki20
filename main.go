@@ -126,6 +126,9 @@ func main() {
 	// Start log content cleanup task
 	go startLogContentCleanupTask()
 
+	// Start token quota reset task
+	go startTokenQuotaResetTask()
+
 	if os.Getenv("ENABLE_PPROF") == "true" {
 		gopool.Go(func() {
 			log.Println(http.ListenAndServe("0.0.0.0:8005", nil))
@@ -328,4 +331,41 @@ func executeLogContentCleanup() {
 	}
 
 	common.SysLog(fmt.Sprintf("Log content cleanup completed, %d records cleaned", rowsAffected))
+}
+
+// startTokenQuotaResetTask 启动令牌额度重置定时任务
+func startTokenQuotaResetTask() {
+	ticker := time.NewTicker(24 * time.Hour)
+	defer ticker.Stop()
+
+	// 计算到下一个凌晨0点的延迟
+	now := time.Now()
+	next0AM := time.Date(now.Year(), now.Month(), now.Day()+1, 0, 0, 0, 0, now.Location())
+	initialDelay := time.Until(next0AM)
+
+	common.SysLog(fmt.Sprintf("Token quota reset task will start at %s (in %v)", next0AM.Format("2006-01-02 15:04:05"), initialDelay))
+
+	// 等待到第一个执行时间
+	time.Sleep(initialDelay)
+
+	// 立即执行一次
+	executeTokenQuotaReset()
+
+	// 然后每24小时执行一次
+	for range ticker.C {
+		executeTokenQuotaReset()
+	}
+}
+
+// executeTokenQuotaReset 执行令牌额度重置
+func executeTokenQuotaReset() {
+	common.SysLog("Starting token quota reset task")
+
+	rowsAffected, err := model.ResetTokenQuotas()
+	if err != nil {
+		common.SysLog(fmt.Sprintf("Token quota reset failed: %s", err.Error()))
+		return
+	}
+
+	common.SysLog(fmt.Sprintf("Token quota reset completed, %d tokens reset", rowsAffected))
 }
